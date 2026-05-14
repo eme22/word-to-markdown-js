@@ -19,6 +19,14 @@ Convert Word documents to beautiful Markdown. Via command line or in your browse
 - Text boxes
 - Comments
 
+## Recent Improvements
+
+- **Modular Architecture**: The codebase has been refactored following the **Single Responsibility Principle (SRP)**. Processing logic is now decoupled into specialized components:
+  - `HTMLProcessor`: Handles Word-to-HTML conversion, sanitization, and metadata extraction.
+  - `MarkdownProcessor`: Manages HTML-to-Markdown conversion, cleanup, and linting.
+- **Improved UI Flow**: The web interface now features a dedicated "Submit" button, replacing automatic processing on file selection. This provides better user control and prevents premature conversions.
+- **Enhanced Type Safety**: Fully migrated to a modular TypeScript structure for better maintainability and developer experience.
+
 ## How is this different from the original?
 
 _TL;DR: This project is a complete rewrite, using modern tools and libraries, and is much faster and more reliable. The output should be the same or better. [Feedback welcome!](https://github.com/benbalter/word-to-markdown-js/issues/new)_
