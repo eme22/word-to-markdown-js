@@ -59,7 +59,7 @@ Paragraph
                 id="file"
                 class="form-control-file p-2 border"
               />
-              <button type="button" class="btn btn-primary btn-lg">
+              <button type="button" id="submit-button" class="btn btn-primary btn-lg" disabled>
                 Submit
               </button>
             </div>
@@ -78,14 +78,21 @@ Paragraph
       <div id="results" class="d-none">
         <h2>Results of converting <span id="filename"></span></h2>
 
-        <div class="moar">
+        <div class="moar gap-3 d-flex justify-content-center">
           <button
             id="copy-button"
             type="button"
-            class="btn btn-outline-primary"
+            class="btn btn-primary"
             data-clipboard-target="#output"
           >
             Copy markdown to clipboard
+          </button>
+          <button
+            id="restart-button"
+            type="button"
+            class="btn btn-outline-secondary"
+          >
+            Convert another file
           </button>
         </div>
 

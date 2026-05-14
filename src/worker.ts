@@ -1,5 +1,5 @@
 import './worker-polyfills';
-import { convertWithWarnings } from './main';
+import { convertWithWarnings } from './main.js';
 
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';

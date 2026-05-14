@@ -1,16 +1,7 @@
 import {
-  convertWithWarnings,
   UnsupportedFileError,
-  InvalidFileError,
-  ConversionError,
   validateFileExtension,
 } from './main.js';
-import rehypeSanitize from 'rehype-sanitize';
-import rehypeStringify from 'rehype-stringify';
-import remarkParse from 'remark-parse';
-import remarkRehype from 'remark-rehype';
-import { unified } from 'unified';
-import remarkGfm from 'remark-gfm';
 import ClipboardJS from 'clipboard';
 import './dark-mode.css';
 
@@ -79,9 +70,29 @@ worker.onmessage = async (e: MessageEvent): Promise<void> => {
   }
 };
 
+let selectedFile: File | null = null;
+
+function handleFileSelect(event: Event): void {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+  
+  if (!file) {
+    selectedFile = null;
+    if (submitButton) submitButton.disabled = true;
+    return;
+  }
+
+  selectedFile = file;
+  if (submitButton) submitButton.disabled = false;
+  
+  // Update filename preview if needed (optional, but good UX)
+  const filenameElement = document.getElementById('filename');
+  if (filenameElement) filenameElement.innerText = file.name;
+}
+
 async function handleFile(): Promise<void> {
-  const file = (this as HTMLInputElement).files?.[0];
-  if (!file) return;
+  if (!selectedFile) return;
+  const file = selectedFile;
 
   const inputElement = document.getElementById('input');
   const loadingElement = document.getElementById('loading');
@@ -182,13 +193,39 @@ function showWarnings(warnings: string[]): void {
   }
 }
 
+function restart(): void {
+  const inputElement = document.getElementById('input');
+  const resultsElement = document.getElementById('results');
+  const fileInput = document.getElementById('file') as HTMLInputElement;
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+
+  if (resultsElement) resultsElement.classList.add('d-none');
+  if (inputElement) inputElement.classList.remove('d-none');
+  if (fileInput) fileInput.value = '';
+  
+  selectedFile = null;
+  if (submitButton) submitButton.disabled = true;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const inputElement = document.getElementById('file');
-  inputElement.addEventListener('change', handleFile, false);
+  if (inputElement) {
+    inputElement.addEventListener('change', handleFileSelect, false);
+  }
+
+  const submitButton = document.getElementById('submit-button');
+  if (submitButton) {
+    submitButton.addEventListener('click', handleFile);
+  }
 
   const copyButton = document.getElementById('copy-button');
   if (copyButton !== null) {
     new ClipboardJS('#copy-button');
+  }
+
+  const restartButton = document.getElementById('restart-button');
+  if (restartButton !== null) {
+    restartButton.addEventListener('click', restart);
   }
 
   // Theme changes are handled automatically by CSS using prefers-color-scheme media query.
