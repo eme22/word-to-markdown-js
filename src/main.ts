@@ -232,53 +232,50 @@ const bulletRegex = new RegExp(
   `^\\s*[${unicodeBullets.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('')}]\\s*`,
 );
 
-// Process HTML in a single pass: convert table headers and remove unicode bullets
-// This is more efficient than parsing the HTML twice
 function processHtml(html: string): string {
-  const root = parse(html);
+  // Use regex for processing to avoid building a full DOM tree,
+  // which can cause stack overflow in Web Workers with large/complex documents.
 
-  // Process tables - convert first row to table headers
-  root.querySelectorAll('table').forEach((table) => {
-    const firstRow = table.querySelector('tr');
-    if (!firstRow) return;
+  // 1. Process lists - remove unicode bullets from unnumbered list items
+  // Pre-compile bullet regex for performance
+  const bullets = ['•', '◦', '▪', '▫', '‣', '⁃', '∙', '·'];
+  const bulletPattern = `[${bullets.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('')}]`;
+  const listBulletRegex = new RegExp(`(<li>)\\s*${bulletPattern}\\s*`, 'g');
 
-    // If first row already has TH elements, leave it alone
-    if (firstRow.querySelector('th')) return;
+  let processedHtml = html.replace(listBulletRegex, '$1');
 
-    // Check if first row is empty or has only empty cells
-    const cells = firstRow.querySelectorAll('td');
-    const isEmpty =
-      cells.length === 0 || cells.every((cell) => !cell.textContent?.trim());
-
-    if (isEmpty) {
-      // Remove empty first row and find the first non-empty row to convert
-      firstRow.remove();
-      const nextRow = table.querySelector('tr');
-      if (nextRow) {
-        nextRow.querySelectorAll('td').forEach((cell) => {
-          cell.tagName = 'th';
-        });
+  // 2. Process tables - convert first row TD elements to TH
+  // This regex finds the first <tr> in each <table> and captures its contents
+  // We use a non-greedy match to find the first <tr>...</tr> block
+  processedHtml = processedHtml.replace(
+    /(<table[^>]*>\s*)(<tr>)([\s\S]*?)(<\/tr>)/gi,
+    (match, tableOpen, trOpen, trContent, trClose) => {
+      // If the first row already has <th>, skip it
+      if (trContent.toLowerCase().includes('<th')) {
+        return match;
       }
-    } else {
-      // Convert first row TD elements to TH
-      cells.forEach((cell) => {
-        cell.tagName = 'th';
-      });
-    }
-  });
 
-  // Process lists - remove unicode bullets from unnumbered list items
-  root.querySelectorAll('ul li').forEach((listItem) => {
-    // Get the text content and remove unicode bullets from the beginning
-    const textContent = listItem.innerHTML;
-    const cleanedContent = textContent.replace(bulletRegex, '');
-    if (cleanedContent !== textContent) {
-      listItem.innerHTML = cleanedContent;
-    }
-  });
+      // Check if the first row is effectively empty (only whitespace/empty tags)
+      const isContentEmpty = !trContent.replace(/<[^>]+>/g, '').trim();
 
-  return root.toString();
+      if (isContentEmpty) {
+        // Remove the empty first row by returning just the table opening
+        // The next <tr> will be handled by the next match or left as is
+        return tableOpen;
+      }
+
+      // Convert all <td> in this first row to <th>
+      const convertedContent = trContent.replace(
+        /<td([^>]*)>([\s\S]*?)<\/td>/gi,
+        '<th$1>$2</th>',
+      );
+      return tableOpen + trOpen + convertedContent + trClose;
+    },
+  );
+
+  return processedHtml;
 }
+
 
 // Reusable TurndownService instance to avoid recreating it for each conversion
 let turndownServiceInstance: TurndownService | null = null;
